@@ -12,7 +12,13 @@
 		<meta property="og:description" content="Play minecraft 1.12 in your browser" />
 		<meta property="og:image" content="favicon.png" />
 		<link type="image/png" rel="shortcut icon" href="favicon.png" />
-		<script type="text/javascript" src="bootstrap.js"></script>
+			<script type="text/javascript" src="bootstrap.js"></script>
+			<!-- Client-side chunk/movement optimizations -->
+			<script type="text/javascript" src="chunk-throttle.js"></script>
+				<script type="text/javascript" src="chunk-worker-proxy.js"></script>
+				<script type="text/javascript" src="movement-tuner.js"></script>
+				<script type="text/javascript" src="low-quality-mode.js"></script>
+				<script type="text/javascript" src="network-optimization.js"></script>
 		<style>
 			#debug_panel {
 				position: fixed;

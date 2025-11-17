@@ -134,4 +134,119 @@ If you're still getting kicked after these fixes, it's likely one of:
 
 ---
 
+## Chunk Generation & Movement Lag Fixes
+
+If you get kicked or experience severe stuttering while moving (chunks generating while you walk), enable the client-side chunk throttling and tuning helpers we added.
+
+1. Ensure these files are served from `/wasm/` on your site:
+
+```html
+<script src="/wasm/chunk-throttle.js"></script>
+<script src="/wasm/movement-tuner.js"></script>
+```
+
+Also consider adding the new low-quality auto-tuner to reduce visual load during high-latency periods:
+
+```html
+<script src="/wasm/low-quality-mode.js"></script>
+```
+
+2. Default tuning (good starting point):
+- `maxChunksPerFrame: 1` — conservative default to avoid frame spikes (we lowered this to be safer on slower clients)
+- `maxQueueLength: 180` — holds backlog when server floods; aggressive drop policy will remove far-away chunks when overloaded
+- `prioritizeNearby: true` — render nearby chunks first
+
+3. Quick runtime tuning (open DevTools Console):
+
+```javascript
+// Increase how many chunks client will process per rIC slot
+window.eaglercraftChunkTuner.setMaxChunksPerFrame(3);
+
+// Increase queue if your server sends many chunks at once
+window.eaglercraftChunkTuner.setMaxQueueLength(400);
+
+// Turn on/off prioritize nearby
+window.eaglercraftChunkTuner.enablePrioritizeNearby(true);
+
+// Check stats
+console.log(window.chunkThrottle.getStats());
+```
+
+Tip: if you're still seeing stutter while moving, enable the low-quality mode manually to force minimal graphics while testing:
+
+```javascript
+// enable low-quality visuals (render distance, particles, fancy graphics)
+window.lowQualityMode.enable();
+
+// disable when stable
+window.lowQualityMode.disable();
+```
+
+4. Movement-aware boost: the client temporarily increases nearby-chunk processing for 250ms after you cross chunk boundaries — this reduces visible pop-in while running.
+
+5. If you still get kicked while moving:
+- Lower server-side view-distance or decrease how many chunks the server sends at once.
+- Consider running chunk generation on server in lower-priority background threads (server-side change).
+
+6. Advanced: Offload chunk mesh compilation to a WebWorker (future):
+- The next-level improvement is to move heavy mesh/vertex creation out of the main thread and rehydrate buffers via transferable ArrayBuffers. This requires changes in the TeaVM-compiled `classes.js` (advanced).
+
+### Worker Prototype (Now available)
+We added a conservative Web Worker prototype that offloads CPU-heavy chunk processing to a background thread. Files:
+
+```text
+/wasm/chunk-worker.js          # worker script (prototype)
+/wasm/chunk-worker-proxy.js    # main-thread proxy: window.chunkWorker.process(packet)
+/wasm/chunk-throttle.js        # updated to use the worker when available
+/wasm/network-optimization.js  # conservative send-coalescing for WebSocket
+```
+
+How it helps:
+- Heavy CPU work (e.g., decompression/mesh processing) can now run in a Worker, reducing main-thread jank.
+- The chunk throttle will offload packet processing to the worker when available, and only integrate results on the main thread.
+
+Runtime hooks (DevTools Console):
+```javascript
+// Is worker available?
+console.log('chunkWorker available', !!window.chunkWorker && window.chunkWorker.available());
+
+// Process stats
+console.log(window.chunkThrottle.getStats());
+
+// Toggle low-quality visuals
+window.lowQualityMode.enable();
+```
+
+## Netlify Deployment (recommended)
+
+If you're hosting on Netlify, include the `_headers` file at the repository root and (optionally) precompress assets so Netlify can serve Brotli/Gzip versions directly.
+
+Files added to this repo for Netlify:
+
+```text
+/_headers             # Netlify headers for caching and security
+/netlify.toml         # Netlify config (calls precompress.sh as build command)
+/precompress.sh       # Optional: create .br and .gz files for fast delivery
+```
+
+Quick deploy steps:
+
+1. Commit & push the repo to your Git provider (GitHub/GitLab) and connect the repo to Netlify.
+2. Ensure `netlify.toml` is present at repo root (it is). Netlify will run the build command defined in `netlify.toml` which runs `./precompress.sh` (safe no-op if brotli not installed).
+3. If you want to precompress locally before drag-and-drop deploy, run:
+
+```bash
+chmod +x ./precompress.sh
+./precompress.sh
+```
+
+4. Deploy: Netlify will pick up `_headers` and the precompressed `.br/.gz` files (if present) and serve them with the headers from `_headers` or `netlify.toml`.
+
+Notes:
+- Keep `index.html` and `wasm/index.html` in the published folder root; `_headers` and `netlify.toml` must be at repo root.
+- Netlify serves precompressed `.br`/`.gz` automatically if present and client supports them.
+- Test the deployed site (`?debug`) and verify response headers (Cache-Control) in Network tab.
+
+---
+
 **Questions?** Check SERVER_LAG_FIX.md for detailed info.
