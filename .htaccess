@@ -1,0 +1,55 @@
+# Enable Gzip compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+    AddOutputFilterByType DEFLATE application/wasm
+</IfModule>
+
+# Enable Brotli compression if available
+<IfModule mod_brotli.c>
+    AddOutputFilterByType BROTLI_COMPRESS text/html text/plain text/xml text/css text/javascript application/javascript application/json
+    AddOutputFilterByType BROTLI_COMPRESS application/wasm
+</IfModule>
+
+# Cache Policy
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Cache assets for 1 month
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType application/wasm "access plus 1 month"
+    
+    # Cache JavaScript for 1 week
+    ExpiresByType text/javascript "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    
+    # Cache CSS for 1 week
+    ExpiresByType text/css "access plus 1 week"
+    
+    # Don't cache HTML
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# HTTP/2 Server Push (if supported)
+<IfModule mod_http2.c>
+    H2PushDiarySize 1024
+    H2Push on
+</IfModule>
+
+# CORS for EPW files
+<FilesMatch "\.(epw|epk)$">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+    Header set Cache-Control "public, max-age=2592000"
+</FilesMatch>
+
+# MIME types
+AddType application/wasm .wasm
+AddType application/octet-stream .epw .epk
+AddType text/javascript .js
+
+# Security headers (optional but recommended)
+Header set X-Content-Type-Options "nosniff"
+Header set X-Frame-Options "SAMEORIGIN"
+Header set X-UA-Compatible "IE=edge"
