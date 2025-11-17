@@ -225,27 +225,50 @@ Files added to this repo for Netlify:
 
 ```text
 /_headers             # Netlify headers for caching and security
+/_redirects           # Netlify routing (SPA fallback)
 /netlify.toml         # Netlify config (calls precompress.sh as build command)
 /precompress.sh       # Optional: create .br and .gz files for fast delivery
 ```
 
-Quick deploy steps:
+**Quick deploy steps:**
 
-1. Commit & push the repo to your Git provider (GitHub/GitLab) and connect the repo to Netlify.
-2. Ensure `netlify.toml` is present at repo root (it is). Netlify will run the build command defined in `netlify.toml` which runs `./precompress.sh` (safe no-op if brotli not installed).
-3. If you want to precompress locally before drag-and-drop deploy, run:
+1. Ensure all files are in the **repo root** (not in a subfolder):
+   - `_headers`, `_redirects`, `netlify.toml`, `index.html`, `wasm/`, `classes.js`, etc.
 
-```bash
-chmod +x ./precompress.sh
-./precompress.sh
-```
+2. Push to GitHub:
+   ```bash
+   git add .
+   git commit -m "Add Netlify config"
+   git push origin main
+   ```
 
-4. Deploy: Netlify will pick up `_headers` and the precompressed `.br/.gz` files (if present) and serve them with the headers from `_headers` or `netlify.toml`.
+3. Connect to Netlify:
+   - Go to https://app.netlify.com
+   - Click "New site from Git"
+   - Select your GitHub repo
+   - **Leave settings default** (Netlify auto-detects `netlify.toml`)
+   - Click "Deploy site"
+
+4. Test:
+   - Visit: `https://your-site.netlify.app/wasm/index.html?debug`
+   - Verify in Network tab: Response headers show `Cache-Control: public, max-age=...`
+
+**If "Page not found" or 404:**
+- Most common cause: files not in repo root or git repo out of sync
+- See `NETLIFY_DEPLOY.md` for troubleshooting
+
+**Precompression (optional):**
+- Netlify runs `./precompress.sh` during build if brotli is available
+- If you want to precompress locally first:
+  ```bash
+  chmod +x ./precompress.sh
+  ./precompress.sh
+  ```
 
 Notes:
-- Keep `index.html` and `wasm/index.html` in the published folder root; `_headers` and `netlify.toml` must be at repo root.
-- Netlify serves precompressed `.br`/`.gz` automatically if present and client supports them.
-- Test the deployed site (`?debug`) and verify response headers (Cache-Control) in Network tab.
+- Keep `index.html` and `wasm/index.html` in the published folder root
+- Netlify serves precompressed `.br`/`.gz` automatically if present and client supports them
+- See `NETLIFY_DEPLOY.md` for full troubleshooting guide
 
 ---
 

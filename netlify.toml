@@ -1,6 +1,15 @@
 [build]
   publish = "."
-  command = "./precompress.sh || true"
+  command = "chmod +x ./precompress.sh && ./precompress.sh || echo 'Precompress skipped (brotli not installed)'"
+
+[dev]
+  publish = "."
+
+# Redirect unknown routes to index.html (prevents 404 on page refresh)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
 [[headers]]
   for = "/*"
@@ -52,3 +61,18 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
     Content-Type = "text/css; charset=utf-8"
+
+# Explicitly serve root index.html (prevents 404)
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Content-Type = "text/html; charset=utf-8"
+
+# Explicitly serve /wasm/index.html
+[[headers]]
+  for = "/wasm/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Content-Type = "text/html; charset=utf-8"
+
