@@ -13,29 +13,140 @@
 		<meta property="og:image" content="favicon.png" />
 		<link type="image/png" rel="shortcut icon" href="favicon.png" />
 		<script type="text/javascript" src="bootstrap.js"></script>
+		<style>
+			#debug_panel {
+				position: fixed;
+				top: 10px;
+				right: 10px;
+				background: rgba(0,0,0,0.8);
+				color: #0f0;
+				font-family: monospace;
+				font-size: 12px;
+				padding: 10px;
+				border: 1px solid #0f0;
+				z-index: 9999;
+				max-height: 200px;
+				overflow-y: auto;
+				display: none;
+				pointer-events: none;
+			}
+		</style>
 		<script type="text/javascript">
 			"use strict";
-			window.addEventListener("load", function() {
+			
+			// Network optimization for server connections
+			const NETWORK_CONFIG = {
+				maxPacketSize: 4096,
+				keepaliveInterval: 20000,
+				pongTimeout: 5000,
+				flushInterval: 16,
+				enablePrefetch: true,
+				relayPrefetch: true
+			};
+			
+			// Auto-detect best relay by latency
+			const RelayPinger = {
+				relays: [
+					{ addr: "wss://relay.deev.is/", name: "deev.is", ping: Infinity },
+					{ addr: "wss://relay.lax1dude.net/", name: "lax1dude", ping: Infinity },
+					{ addr: "wss://relay.shhnowisnottheti.me/", name: "ayunami", ping: Infinity }
+				],
+				
+				async ping(relayAddr) {
+					try {
+						const start = performance.now();
+						const ws = new WebSocket(relayAddr);
+						return new Promise((resolve) => {
+							const timeout = setTimeout(() => {
+								ws.close();
+								resolve(Infinity);
+							}, 3000);
+							
+							ws.onopen = () => {
+								ws.close();
+								clearTimeout(timeout);
+								resolve(performance.now() - start);
+							};
+							
+							ws.onerror = () => {
+								clearTimeout(timeout);
+								resolve(Infinity);
+							};
+						});
+					} catch(e) {
+						return Infinity;
+					}
+				},
+				
+				async findBestRelay() {
+					try {
+						const pings = await Promise.all(
+							this.relays.map(r => this.ping(r.addr).then(p => ({...r, ping: p})))
+						);
+						
+						this.relays = pings.sort((a, b) => a.ping - b.ping);
+						
+						console.log("Relay latency:", 
+							this.relays.map(r => `${r.name}: ${r.ping.toFixed(0)}ms`).join(" | ")
+						);
+						
+						return this.relays[0];
+					} catch(e) {
+						console.error("Relay ping failed:", e);
+						return this.relays[0];
+					}
+				}
+			};
+			
+			window.addEventListener("load", async function() {
 				if(window.location.href.indexOf("file:") === 0) {
 					alert("HTTP please, do not open this file locally, run a local HTTP server and load it via HTTP");
 				}else {
 					
+					// Start relay detection early (non-blocking)
+					const bestRelay = await RelayPinger.findBestRelay();
+					
+					// DNS prefetch for all relays (faster connection)
+					if(NETWORK_CONFIG.relayPrefetch) {
+						RelayPinger.relays.forEach(r => {
+							const link = document.createElement('link');
+							link.rel = 'dns-prefetch';
+							link.href = r.addr;
+							document.head.appendChild(link);
+						});
+					}
+					
+					// Build relay list sorted by latency
+					const relayList = RelayPinger.relays.map((r, idx) => ({
+						addr: r.addr,
+						comment: `${r.name} (${r.ping.toFixed(0)}ms)`,
+						primary: idx === 0
+					}));
+					
 					// %%%%%%%%% launch options %%%%%%%%%%%%
 					
-					var relayId = Math.floor(Math.random() * 3);
 					window.eaglercraftXOpts = {
 						demoMode: false,
 						container: "game_frame",
 						assetsURI: "assets.epw",
 						worldsDB: "worlds",
+						logInvalidCerts: false,
+						
+						// Network optimization
+						networkConfig: {
+							maxPacketSize: NETWORK_CONFIG.maxPacketSize,
+							keepaliveInterval: NETWORK_CONFIG.keepaliveInterval,
+							flushInterval: NETWORK_CONFIG.flushInterval,
+							enableBuffering: true,
+							useCompression: true
+						},
+						
 						servers: [
 							/* example: { addr: "ws://localhost:8081/", name: "Local test server" } */
 						],
-						relays: [
-							{ addr: "wss://relay.deev.is/", comment: "lax1dude relay #1", primary: relayId == 0 },
-							{ addr: "wss://relay.lax1dude.net/", comment: "lax1dude relay #2", primary: relayId == 1 },
-							{ addr: "wss://relay.shhnowisnottheti.me/", comment: "ayunami relay #1", primary: relayId == 2 }
-						]
+						
+						// Sorted by latency
+						relays: relayList
 					};
 					
 					// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -45,6 +156,24 @@
 						q = new window.URLSearchParams(q);
 						var s = q.get("server");
 						if(s) window.eaglercraftXOpts.joinServer = s;
+					}
+					
+					// Debug stats panel (use ?debug in URL to enable)
+					if(window.location.search.indexOf("debug") !== -1) {
+						const debugPanel = document.createElement('div');
+						debugPanel.id = 'debug_panel';
+						debugPanel.style.display = 'block';
+						document.body.appendChild(debugPanel);
+						
+						setInterval(() => {
+							let info = '';
+							if(window.networkStats) {
+								info = `Ping: ${window.networkStats.latency.toFixed(0)}ms\n`;
+								info += `Packets: ${window.networkStats.packetsSent}↑ ${window.networkStats.packetsRecv}↓\n`;
+								info += `Buffer: ${window.networkStats.bufferSize}B\n`;
+							}
+							debugPanel.textContent = info || 'Waiting for game...';
+						}, 100);
 					}
 					
 					main();

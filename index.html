@@ -12,22 +12,77 @@
 		<meta property="og:description" content="test directory HTML page">
 		<link type="image/png" rel="shortcut icon" href="favicon.png">
 		<script type="text/javascript" src="classes.js"></script>
+		<style>
+			#debug_panel {
+				position: fixed;
+				top: 10px;
+				right: 10px;
+				background: rgba(0,0,0,0.8);
+				color: #0f0;
+				font-family: monospace;
+				font-size: 12px;
+				padding: 10px;
+				border: 1px solid #0f0;
+				z-index: 9999;
+				max-height: 200px;
+				overflow-y: auto;
+				display: none;
+				pointer-events: none;
+			}
+		</style>
 		<script type="text/javascript">
 			"use strict";
+			
+			// Network optimization for server connections
+			const NETWORK_CONFIG = {
+				maxPacketSize: 4096,
+				keepaliveInterval: 20000,
+				enableCompression: true,
+				reducedLatency: true
+			};
+			
 			window.addEventListener("load", function() {
 				if(window.location.href.indexOf("file:") === 0) {
 					alert("HTTP please, do not open this file locally, run a local HTTP server and load it via HTTP");
 				}else {
-					var relayId = Math.floor(Math.random() * 3);
 					window.eaglercraftXOpts = {
 						demoMode: false,
 						container: "game_frame",
 						assetsURI: "assets.epk",
 						localesURI: "lang/",
 						worldsDB: "worlds",
-						logInvalidCerts: true,
-						crashOnUncaughtExceptions: true
+						logInvalidCerts: false,
+						crashOnUncaughtExceptions: false,
+						
+						// Network optimizations for server stability
+						networkConfig: {
+							maxPacketSize: NETWORK_CONFIG.maxPacketSize,
+							keepaliveInterval: NETWORK_CONFIG.keepaliveInterval,
+							enableCompression: NETWORK_CONFIG.enableCompression,
+							reducedLatency: NETWORK_CONFIG.reducedLatency,
+							enableBuffering: true,
+							flushInterval: 16
+						}
 					};
+					
+					// Debug stats panel (use ?debug in URL to enable)
+					if(window.location.search.indexOf("debug") !== -1) {
+						const debugPanel = document.createElement('div');
+						debugPanel.id = 'debug_panel';
+						debugPanel.style.display = 'block';
+						document.body.appendChild(debugPanel);
+						
+						setInterval(() => {
+							let info = '';
+							if(window.networkStats) {
+								info = `Ping: ${window.networkStats.latency.toFixed(0)}ms\n`;
+								info += `Packets: ${window.networkStats.packetsSent}↑ ${window.networkStats.packetsRecv}↓\n`;
+								info += `Timeout: ${window.networkStats.timeouts}x\n`;
+							}
+							debugPanel.textContent = info || 'Waiting for game...';
+						}, 100);
+					}
+					
 					main();
 				}
 			});
