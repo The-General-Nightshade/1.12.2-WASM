@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Server Console — Eaglercraft Hosting</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header>
+    <h1 id="serverTitle">Server Console</h1>
+    <nav>
+      <a href="/servers.html">Back to Servers</a>
+      <a id="logoutLink" href="#">Logout</a>
+    </nav>
+  </header>
+
+  <main class="console-page">
+    <section class="server-controls">
+      <button id="startBtn">Start</button>
+      <button id="stopBtn">Stop</button>
+      <span id="status" class="status-badge">stopped</span>
+    </section>
+
+    <section class="console-section">
+      <div id="console" class="console"></div>
+      <form id="commandForm" class="command-form">
+        <input id="commandInput" type="text" placeholder="Enter command..." />
+        <button type="submit">Send</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="/js/console.js"></script>
+</body>
+</html>

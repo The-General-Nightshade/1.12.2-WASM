@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Servers — Eaglercraft Hosting</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Servers</h1>
+    <nav>
+      <a href="/dashboard.html">Dashboard</a>
+      <a id="logoutLink" href="#">Logout</a>
+    </nav>
+  </header>
+
+  <main class="dashboard">
+    <section class="create-server">
+      <h3>Create a server</h3>
+      <form id="createServerForm">
+        <label>Server name<input name="name" required minlength="3" /></label>
+        <button type="submit">Create</button>
+      </form>
+    </section>
+
+    <section class="servers">
+      <h3>Your servers</h3>
+      <div id="serversList" class="servers-grid"></div>
+    </section>
+  </main>
+
+  <script src="/js/servers.js"></script>
+</body>
+</html>

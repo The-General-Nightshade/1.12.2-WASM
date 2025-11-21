@@ -1,0 +1,4 @@
+# Wrangler configuration for Cloudflare Pages
+# This project is a full-stack app, so we use a custom build
+
+[env.production]
